@@ -1,42 +1,23 @@
 import { useState, useRef, useEffect } from "react";
-import WaveSurfer from 'wavesurfer.js';
 
-const audioContext = new AudioContext();
+const audioContext = new AudioContext(); // Single instance
 
 function App() {
   const ws = useRef<WebSocket | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
-  const waveformRef = useRef<HTMLDivElement>(null);
-  const wavesurfer = useRef<WaveSurfer | null>(null);
 
   const [selectedFile, setSelectedFile] = useState<null | File>(null);
   const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
-    if (waveformRef.current) {
-      wavesurfer.current = WaveSurfer.create({
-        container: waveformRef.current,
-        waveColor: '#4a5568',
-        progressColor: '#48bb78',
-        cursorColor: '#2f855a',
-        barWidth: 2,
-        barRadius: 3,
-        cursorWidth: 1,
-        height: 100,
-        barGap: 3
-      });
-    }
-
     ws.current = new WebSocket("ws://localhost:8005/ws/transcription");
+
     ws.current.onopen = () => console.log("WebSocket Connected");
     ws.current.onerror = (error) => console.error("WebSocket Error:", error);
     ws.current.onclose = () => console.log("WebSocket Disconnected");
 
-    return () => {
-      ws.current?.close();
-      wavesurfer.current?.destroy();
-    };
+    return () => ws.current?.close();
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,13 +26,13 @@ function App() {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
 
+      // Validate file type
       if (!file.type.startsWith("audio/")) {
         console.error("Invalid file type. Please upload an audio file.");
         return;
       }
 
       setSelectedFile(file);
-      wavesurfer.current?.loadBlob(file);
 
       const reader = new FileReader();
       reader.onload = async () => {
@@ -83,8 +64,6 @@ function App() {
       mediaRecorder.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunks.current.push(event.data);
-          const blob = new Blob([event.data], { type: 'audio/wav' });
-          wavesurfer.current?.loadBlob(blob);
         }
       };
 
@@ -106,7 +85,7 @@ function App() {
         stream.getTracks().forEach((track) => track.stop());
       };
 
-      mediaRecorder.current.start(100); // Update every 100ms for visualization
+      mediaRecorder.current.start();
       setIsRecording(true);
     } catch (error) {
       console.error("Error accessing microphone:", error);
@@ -120,71 +99,126 @@ function App() {
     }
   };
 
-  // ..
+  const convertToMono = (audioBuffer: AudioBuffer) => {
+    const monoBuffer = audioContext.createBuffer(
+      1,
+      audioBuffer.length,
+      audioBuffer.sampleRate
+    );
+
+    const monoData = monoBuffer.getChannelData(0);
+    const numChannels = audioBuffer.numberOfChannels;
+
+    for (let i = 0; i < audioBuffer.length; i++) {
+      let sum = 0;
+      for (let channel = 0; channel < numChannels; channel++) {
+        sum += audioBuffer.getChannelData(channel)[i];
+      }
+      monoData[i] = sum / numChannels;
+    }
+    return monoBuffer;
+  };
+
+  const createAudioChunks = (
+    audioBuffer: AudioBuffer,
+    chunkDuration: number,
+    overlapDuration: number
+  ) => {
+    if (overlapDuration >= chunkDuration) {
+      throw new Error("Overlap duration must be smaller than chunk duration");
+    }
+
+    const chunks: AudioBuffer[] = [];
+    const sampleRate = audioBuffer.sampleRate;
+    const totalSamples = audioBuffer.length;
+
+    const chunkSize = chunkDuration * sampleRate;
+    const overlapSize = overlapDuration * sampleRate;
+    const stepSize = chunkSize - overlapSize;
+
+    for (let start = 0; start < totalSamples; start += stepSize) {
+      const end = Math.min(start + chunkSize, totalSamples);
+      const chunk = audioContext.createBuffer(1, end - start, sampleRate);
+
+      const chunkData = chunk.getChannelData(0);
+      const originalData = audioBuffer.getChannelData(0);
+
+      for (let i = start; i < end; i++) {
+        chunkData[i - start] = originalData[i];
+      }
+
+      chunks.push(chunk);
+    }
+
+    return chunks;
+  };
+
+  const resampleAndConvertToInt16 = (audioBuffer: AudioBuffer) => {
+    const targetSampleRate = 16000;
+    const originalSampleRate = audioBuffer.sampleRate;
+    const audioData = audioBuffer.getChannelData(0);
+
+    const ratio = targetSampleRate / originalSampleRate;
+    const newLength = Math.round(audioData.length * ratio);
+    const resampledData = new Float32Array(newLength);
+
+    for (let i = 0; i < newLength; i++) {
+      const index = Math.round(i / ratio);
+      resampledData[i] = audioData[Math.min(index, audioData.length - 1)];
+    }
+
+    // Convert Float32 to Int16
+    const int16Array = new Int16Array(newLength);
+    for (let i = 0; i < newLength; i++) {
+      int16Array[i] = Math.max(
+        -32768,
+        Math.min(32767, resampledData[i] * 32768)
+      );
+    }
+
+    return int16Array;
+  };
+
+  const sendChunkToBackend = (audioChunk: AudioBuffer) => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      console.error("WebSocket is not connected");
+      return;
+    }
+
+    const int16Array = resampleAndConvertToInt16(audioChunk);
+
+    // Convert Int16Array to Base64
+    const base64Audio = btoa(
+      String.fromCharCode(...new Uint8Array(int16Array.buffer))
+    );
+
+    ws.current.send(base64Audio);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 p-8">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8 border border-green-200">
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-green-800 mb-2">Farm Voice Notes</h1>
-          <p className="text-green-600">Record your farming observations and notes</p>
+    <div className="flex flex-col items-center">
+      <p className="text-5xl">Transcribe Here</p>
+
+      <input type="file" onChange={handleFileChange} accept="audio/*" />
+
+      {selectedFile && (
+        <div>
+          <p>File Name: {selectedFile.name}</p>
+          <p>File Size: {(selectedFile.size / 1_000_000).toFixed(2)} MB</p>
+          <p>File Type: {selectedFile.type}</p>
         </div>
+      )}
 
-        <div className="bg-green-50 p-6 rounded-lg mb-8">
-          <div className="flex items-center justify-center mb-6">
-            <label className="relative cursor-pointer bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors">
-              <span>Choose Audio File</span>
-              <input
-                type="file"
-                onChange={handleFileChange}
-                accept="audio/*"
-                className="hidden"
-              />
-            </label>
-          </div>
-
-          {selectedFile && (
-            <div className="text-green-800 bg-green-100 p-4 rounded-lg mb-4">
-              <p className="font-semibold">File Details:</p>
-              <p>Name: {selectedFile.name}</p>
-              <p>Size: {(selectedFile.size / 1_000_000).toFixed(2)} MB</p>
-              <p>Type: {selectedFile.type}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="mb-8">
-          <div 
-            ref={waveformRef} 
-            className="bg-green-50 rounded-lg p-4 border border-green-200"
-          />
-        </div>
-
-        <div className="flex justify-center">
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            className={`
-              px-8 py-4 rounded-full font-bold text-lg shadow-lg transform transition-all
-              ${isRecording 
-                ? 'bg-red-600 hover:bg-red-700 scale-105' 
-                : 'bg-green-600 hover:bg-green-700'
-              } text-white
-            `}
-          >
-            {isRecording ? (
-              <div className="flex items-center">
-                <span className="animate-pulse mr-2">●</span>
-                Stop Recording
-              </div>
-            ) : (
-              "Start Recording"
-            )}
-          </button>
-
-        </div>
-      </div>
+      <button
+        onClick={isRecording ? stopRecording : startRecording}
+        className={`mt-4 px-4 py-2 text-white rounded-lg ${
+          isRecording ? "bg-red-600" : "bg-green-600"
+        }`}
+      >
+        {isRecording ? "Stop Recording" : "Start Recording"}
+      </button>
     </div>
   );
 }
 
 export default App;
-
