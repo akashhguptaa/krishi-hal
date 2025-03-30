@@ -8,7 +8,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from loguru import logger
 
 app = FastAPI()
-
 audio_buffer = []  # Buffer to accumulate audio chunks
 
 @app.websocket("/ws/transcription")
