@@ -1,4 +1,4 @@
 .env
 env
 backend/__pycache__
-frontend/krishi-hal-frontend/node_modules
+frontend\krishi-hal-frontend\node_modules
