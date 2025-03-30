@@ -24,6 +24,26 @@ export default function App() {
       reader.onload = async () => {
         const imageData = reader.result as string;
         setImgs(imageData);
+        const base64String = imageData.split(",")[1];
+
+        try {
+          const response = await fetch("http://localhost:8005/upload-image/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ base64_image: base64String }),
+          });
+
+          const result = await response.json();
+          if (response.ok) {
+            console.log("Image uploaded successfully:", result.file_path);
+          } else {
+            console.error("Error uploading image:", result.detail);
+          }
+        } catch (error) {
+          console.error("Network error:", error);
+        }
       };
 
       reader.readAsDataURL(file);
