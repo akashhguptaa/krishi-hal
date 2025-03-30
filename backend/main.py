@@ -9,6 +9,10 @@ from loguru import logger
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from sarvam_transc import transcribe
+from predict_disease import load_model, load_labels, infer
+from fastapi import HTTPException
+from pydantic import BaseModel
+
 
 app = FastAPI()
 
@@ -26,6 +30,13 @@ class ImagePayload(BaseModel):
     base64_image: str  # Buffer to accumulate audio chunks
 
 transcription_results = []  # Accumulate transcription results
+
+
+interpreter = load_model()
+labels = load_labels()
+
+class ImageData(BaseModel):
+    image_base64: str
 
 @app.websocket("/ws/transcription")
 async def websocket_transcription(websocket: WebSocket):
@@ -110,6 +121,13 @@ def save_chunk_to_temp_file(audio_chunk):
         return None
     
 
+@app.post("/predict/")
+async def predict(image_data: ImageData):
+    try:
+        prediction = infer(image_data.image_base64, interpreter, labels)
+        return prediction
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
