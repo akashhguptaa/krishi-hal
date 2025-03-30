@@ -4,6 +4,7 @@ import numpy as np
 import soundfile as sf
 import base64
 import tempfile
+from datetime import datetime
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Body
 from loguru import logger
 from sarvam_transc import transcribe, translate
@@ -20,6 +21,7 @@ from typing import List
 from datetime import date as _date
 from pydantic import Field
 import json
+from TTS import speak
 
 app = FastAPI()
 
@@ -33,8 +35,6 @@ app.add_middleware(
 
 
 audio_buffer = []
-transcription_results = []  # Accumulate transcription results
-communication_history = []
 
 
 class ImagePayload(BaseModel):
@@ -68,6 +68,10 @@ def save_data(data):
         json.dump(data, file, indent=4)
 
 
+transcription_results = []  # Accumulate transcription results
+communication_history = []
+
+
 interpreter = load_model()
 labels = load_labels()
 
@@ -75,70 +79,78 @@ labels = load_labels()
 class ImageData(BaseModel):
     image_base64: str
 
+
 interpreter = load_model()
 labels = load_labels()
+
+
 class ImageData(BaseModel):
     image_base64: str
-
-
-interpreter = load_model()
-labels = load_labels()
 
 
 @app.websocket("/ws/transcription")
 async def websocket_transcription(websocket: WebSocket):
     await websocket.accept()
     logger.info("WebSocket connected")
+    
+    transcription_results = []
 
     try:
         while True:
-            base64_audio = await websocket.receive_text()
-            logger.info("Received audio chunk: ", base64_audio)
-
-            if base64_audio:
-                try:
-                    # Decode Base64 to bytes
-                    audio_bytes = base64.b64decode(base64_audio)
-
-                    # Convert bytes to int16 array
-                    int16_array = np.frombuffer(audio_bytes, dtype=np.int16)
-
-                    # Save chunk as a temporary WAV file
-                    temp_file_path = save_chunk_to_temp_file(int16_array)
-                    if temp_file_path:
-                        transcription = transcribe(temp_file_path)
-                        transcription_results.append(transcription)
-                        logger.success(f"Transcribed chunk: {transcription}")
->>>>>>>>> Temporary merge branch 2
+            try:
+                # Set a timeout for receiving the next chunk
+                data = await websocket.receive_text()
                 
-                except base64.binascii.Error as e:
-                    logger.error(f"Base64 decoding error: {e}")
-                except ValueError as e:
-                    logger.error(f"Invalid audio format received: {e}")
-            else:
-                # No more audio chunks received, process final transcription
-                logger.info("getting ready for the response")
-                final_transcription = " ".join(transcription_results)
-                logger.success(f"Final transcription: {final_transcription}")
-                transcription_results.clear()
+                # Check if this is an end-of-transmission signal
+                if data == "END_OF_TRANSMISSION":
+                    logger.info("Received end of transmission signal")
+                    break
 
-                # Get response from chat function
-                chat_response = chat(str(final_transcription), communication_history)
-                logger.success(f"Chat response: {chat_response}")
+                logger.info(f"Received audio chunk: {len(data)} bytes")
 
-                # Translate and convert to speech
-                for audio_data in translate(chat_response):
-                    # audio_base64 = speak(translated_text)
-                    if audio_data:
-                        await websocket.send_text(audio_data)
-                        logger.success("Sent translated speech to frontend")
+                if data:
+                    try:
+                        # Decode Base64 to bytes
+                        audio_bytes = base64.b64decode(data)
+                        int16_array = np.frombuffer(audio_bytes, dtype=np.int16)
+                        temp_file_path = save_chunk_to_temp_file(int16_array)
+                        if temp_file_path:
+                            transcription = transcribe(temp_file_path)
+                            transcription_results.append(transcription)
+                            logger.success(f"Transcribed chunk: {transcription}")
+
+                    except Exception as e:
+                        logger.error(f"Error processing chunk: {e}")
+                        continue
+                
+            except WebSocketDisconnect:
+                logger.warning("Client disconnected. Processing final transcription.")
                 break
+            except Exception as e:
+                logger.error(f"Unexpected error in chunk processing: {e}")
+                continue
+        
+        # Only reach this point if we broke out of the loop
+        logger.info("Processing final transcription")
+        final_transcription = " ".join(transcription_results)
+        logger.success(f"Final transcription: {final_transcription}")
+        
+        chat_response = chat(str(final_transcription), communication_history)
+        logger.success(f"Chat response: {chat_response}")
+        translation = translate(chat_response)
+        logger.success(translation)
+        for audio_data in speak(translation):
+            logger.info("audio data is here")
+            if audio_data:
+                await websocket.send_text(audio_data)
+                logger.success("Sent translated speech to frontend")
+        
+        transcription_results.clear()
 
-    except WebSocketDisconnect:
-        logger.warning("WebSocket disconnected unexpectedly.")
     except Exception as e:
-        logger.error(f"Unexpected WebSocket error: {e}")
-
+        logger.error(f"Unexpected error in websocket: {e}")
+    finally:
+        await websocket.close()
 
 @app.post("/upload-image/")
 async def upload_image(payload: ImagePayload):
@@ -166,7 +178,7 @@ async def upload_image(payload: ImagePayload):
         return {
             "message": "Image uploaded and processed successfully",
             "file_path": temp_file_path,
-            "prediction": prediction
+            "prediction": prediction,
         }
 
     except base64.binascii.Error as e:
@@ -175,6 +187,7 @@ async def upload_image(payload: ImagePayload):
     except Exception as e:
         logger.error(f"Error saving image: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
 
 def save_chunk_to_temp_file(audio_chunk):
     """Saves an audio chunk as a temporary WAV file."""
@@ -239,26 +252,23 @@ async def add_farmer(farmer: Farmer):
 
 
 @app.post("/farmers/{farmer_id}/treatments/", status_code=201)
-async def add_treatment(
-      farmer_id: str,
-      treatment: Treatment = Body(...)
-  ):
-      data = load_data()
-      for farmer in data["farmers"]:
-          if farmer["farmer_id"] == farmer_id:
-              farmer["treatment_history"].append(treatment.dict())
-              save_data(data)
-              return {"message": "Treatment added successfully."}
-      raise HTTPException(status_code=404, detail="Farmer not found.")
+async def add_treatment(farmer_id: str, treatment: Treatment = Body(...)):
+    data = load_data()
+    for farmer in data["farmers"]:
+        if farmer["farmer_id"] == farmer_id:
+            farmer["treatment_history"].append(treatment.dict())
+            save_data(data)
+            return {"message": "Treatment added successfully."}
+    raise HTTPException(status_code=404, detail="Farmer not found.")
 
 
 @app.get("/farmers/{farmer_id}/treatments/", response_model=List[Treatment])
 async def get_treatment_history(farmer_id: str):
-      data = load_data()
-      for farmer in data["farmers"]:
-          if farmer["farmer_id"] == farmer_id:
-              return farmer["treatment_history"]
-      raise HTTPException(status_code=404, detail="Farmer not found.")
+    data = load_data()
+    for farmer in data["farmers"]:
+        if farmer["farmer_id"] == farmer_id:
+            return farmer["treatment_history"]
+    raise HTTPException(status_code=404, detail="Farmer not found.")
 
 
 if __name__ == "__main__":

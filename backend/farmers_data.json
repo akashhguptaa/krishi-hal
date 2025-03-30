@@ -1,3 +1,35 @@
 {
-    "farmers": []
+  "farmers": {
+    "farmer_id": {
+      "land_size": 52,
+      "farmer_name": "Hari Gopal",
+      "crop": {
+        "name": "name of crop",
+        "health": {
+          "month_or_week_1": [
+            "name of pesticide",
+            "condition of soil and plant based on image data",
+            {
+              "weather": {
+                "humidity": "value",
+                "temperature": "value",
+                "other_conditions": "value"
+              }
+            }
+          ],
+          "month_or_week_2": [
+            "name of pesticide",
+            "condition of soil and plant based on image data",
+            {
+              "weather": {
+                "humidity": "value",
+                "temperature": "value",
+                "other_conditions": "value"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
 }

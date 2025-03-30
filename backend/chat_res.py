@@ -24,7 +24,7 @@ def generate_conversation_text(history):
     for turn in history:
         if turn["role"] == "user":
             conversation_text += f"User: {turn['content']}\n"
-        elif turn["role"] == "ai":
+        elif turn["role"] == "farmer_helper":
             conversation_text += f"AI: {turn['content']}\n"
     return conversation_text
 
@@ -46,7 +46,7 @@ def chat(user_input, conversation_history=[]):
     # Extract the AI's response text
     ai_response = response.text
     print("AI:", ai_response)
-    conversation_history.append({"role": "ai", "content": ai_response})
+    conversation_history.append({"role": "farmer_helper", "content": ai_response})
     return ai_response
 
     # Append the AI response to the conversation history

@@ -61,6 +61,8 @@ export default function App() {
       );
       send(base64Audio);
     });
+    //send signal
+    send("END_OF_TRANSMISSION");
   };
 
   const { startRecording, stopRecording, isRecording } =
