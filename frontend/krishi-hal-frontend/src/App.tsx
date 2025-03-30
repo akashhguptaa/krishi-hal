@@ -120,8 +120,7 @@ function App() {
     }
   };
 
-  // ... [keeping all your existing helper functions: convertToMono, createAudioChunks, resampleAndConvertToInt16, sendChunkToBackend]
-
+  // ..
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 p-8">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8 border border-green-200">
@@ -180,6 +179,7 @@ function App() {
               "Start Recording"
             )}
           </button>
+
         </div>
       </div>
     </div>
@@ -187,3 +187,4 @@ function App() {
 }
 
 export default App;
+
