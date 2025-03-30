@@ -131,8 +131,9 @@ async def websocket_transcription(websocket: WebSocket):
 
 @app.post("/upload-image/")
 async def upload_image(payload: ImagePayload):
-    """Receives a Base64 image, decodes, and saves it as a temporary file."""
+    """Receives a Base64 image, decodes, saves it temporarily, and runs inference."""
     try:
+        # Decode Base64 image
         image_data = base64.b64decode(payload.base64_image)
 
         # Create a temporary image file
@@ -143,7 +144,19 @@ async def upload_image(payload: ImagePayload):
 
         logger.success(f"Image saved temporarily at: {temp_file_path}")
 
-        return {"message": "Image uploaded successfully", "file_path": temp_file_path}
+        # Run inference on the uploaded image
+        try:
+            prediction = infer(payload.base64_image, interpreter, labels)
+            logger.success(f"Inference result: {prediction}")
+        except Exception as e:
+            logger.error(f"Error during inference: {e}")
+            raise HTTPException(status_code=500, detail="Inference failed")
+
+        return {
+            "message": "Image uploaded and processed successfully",
+            "file_path": temp_file_path,
+            "prediction": prediction
+        }
 
     except base64.binascii.Error as e:
         logger.error(f"Base64 decoding error: {e}")
@@ -151,6 +164,7 @@ async def upload_image(payload: ImagePayload):
     except Exception as e:
         logger.error(f"Error saving image: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
 
 
 def save_chunk_to_temp_file(audio_chunk):
@@ -211,7 +225,7 @@ async def add_farmer(farmer: Farmer):
 
 @app.post("/farmers/{farmer_id}/treatments/", status_code=201)
 async def add_treatment(
-      farmer_id: str = Path(..., example="1"),
+      farmer_id: str,
       treatment: Treatment = Body(...)
   ):
       data = load_data()
@@ -223,7 +237,7 @@ async def add_treatment(
       raise HTTPException(status_code=404, detail="Farmer not found.")
 
 @app.get("/farmers/{farmer_id}/treatments/", response_model=List[Treatment])
-async def get_treatment_history(farmer_id: str = Path(..., example="1")):
+async def get_treatment_history(farmer_id: str):
       data = load_data()
       for farmer in data["farmers"]:
           if farmer["farmer_id"] == farmer_id:
