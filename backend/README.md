@@ -119,4 +119,114 @@ This document provides an overview of the available API endpoints, including the
 }
 ```
 
-**Note:** Ensure that the `city_id` provided corresponds to a valid city in the OpenWeatherMap database. 
+## 4. Farmer Management Endpoints
+
+### 4.1 Add a New Farmer
+
+**Endpoint:** `/farmers/`
+
+**Method:** `POST`
+
+**Description:** Adds a new farmer to the system.
+
+**Request Body:**
+
+- `farmer_id` (string): Unique identifier for the farmer.
+- `name` (string): Name of the farmer.
+
+**Response:**
+
+- `201 Created`: Farmer added successfully.
+- `400 Bad Request`: Farmer with the given ID already exists.
+
+**Example Request:**
+
+```json
+{
+  "farmer_id": "1",
+  "name": "John Doe"
+}
+```
+
+**Example Response:**
+
+```json
+{
+  "message": "Farmer added successfully."
+}
+```
+
+### 4.2 Add Treatment to Farmer's History
+
+**Endpoint:** `/farmers/{farmer_id}/treatments/`
+
+**Method:** `POST`
+
+**Description:** Adds a new treatment record to the specified farmer's treatment history.
+
+**Path Parameter:**
+
+- `farmer_id` (string): Unique identifier for the farmer.
+
+**Request Body:**
+
+- `date` (string): Date of treatment in the format YYYY-MM-DD.
+- `treatment` (string): Description of the treatment.
+- `crop` (string): Crop associated with the treatment.
+
+**Response:**
+
+- `201 Created`: Treatment added successfully.
+- `404 Not Found`: Farmer with the given ID not found.
+
+**Example Request:**
+
+```json
+{
+  "date": "2025-03-30",
+  "treatment": "Pesticide A",
+  "crop": "Wheat"
+}
+```
+
+**Example Response:**
+
+```json
+{
+  "message": "Treatment added successfully."
+}
+```
+
+### 4.3 Retrieve Farmer's Treatment History
+
+**Endpoint:** `/farmers/{farmer_id}/treatments/`
+
+**Method:** `GET`
+
+**Description:** Retrieves the treatment history of the specified farmer.
+
+**Path Parameter:**
+
+- `farmer_id` (string): Unique identifier for the farmer.
+
+**Response:**
+
+- `200 OK`: Returns a JSON array containing the treatment history.
+- `404 Not Found`: Farmer with the given ID not found.
+
+**Example Response:**
+
+```json
+[
+  {
+    "date": "2025-03-30",
+    "treatment": "Pesticide A",
+    "crop": "Wheat"
+  },
+  {
+    "date": "2025-03-28",
+    "treatment": "Fertilizer B",
+    "crop": "Corn"
+  }
+]
+``` 
