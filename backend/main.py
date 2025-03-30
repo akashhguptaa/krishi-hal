@@ -1,10 +1,11 @@
 import os
+from pathlib import Path
 import numpy as np
 import soundfile as sf
 import base64
 import tempfile
 from datetime import datetime
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Body
 from loguru import logger
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,7 +14,10 @@ from predict_disease import load_model, load_labels, infer
 from weather_pest import get_weather_data, analyze_weather_conditions
 from fastapi import HTTPException
 from pydantic import BaseModel
-
+from typing import List
+from datetime import date as _date
+from pydantic import Field
+import json
 
 app = FastAPI()
 
@@ -29,6 +33,28 @@ app.add_middleware(
 audio_buffer = []
 class ImagePayload(BaseModel):
     base64_image: str  # Buffer to accumulate audio chunks
+
+class Treatment(BaseModel):
+    date: _date = Field(..., example="2025-03-30")
+    treatment: str = Field(..., example="Pesticide A")
+    crop: str = Field(..., example="Wheat")
+
+class Farmer(BaseModel):
+    farmer_id: str = Field(..., example="1")
+    name: str = Field(..., example="John Doe")
+    treatment_history: List[Treatment] = []
+
+DATA_FILE = "farmers_data.json"
+
+def load_data():
+    if not os.path.exists(DATA_FILE):
+        return {"farmers": []}
+    with open(DATA_FILE, "r") as file:
+        return json.load(file)
+
+def save_data(data):
+    with open(DATA_FILE, "w") as file:
+        json.dump(data, file, indent=4)
 
 transcription_results = []  # Accumulate transcription results
 
@@ -151,6 +177,39 @@ async def weather_alerts(city_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/farmers/", status_code=201)
+async def add_farmer(farmer: Farmer):
+      data = load_data()
+      if any(f["farmer_id"] == farmer.farmer_id for f in data["farmers"]):
+          raise HTTPException(status_code=400, detail="Farmer with this ID already exists.")
+      data["farmers"].append(farmer.dict())
+      save_data(data)
+      return {"message": "Farmer added successfully."}
+
+@app.post("/farmers/{farmer_id}/treatments/", status_code=201)
+async def add_treatment(
+      farmer_id: str = Path(..., example="1"),
+      treatment: Treatment = Body(...)
+  ):
+      data = load_data()
+      for farmer in data["farmers"]:
+          if farmer["farmer_id"] == farmer_id:
+              farmer["treatment_history"].append(treatment.dict())
+              save_data(data)
+              return {"message": "Treatment added successfully."}
+      raise HTTPException(status_code=404, detail="Farmer not found.")
+
+@app.get("/farmers/{farmer_id}/treatments/", response_model=List[Treatment])
+async def get_treatment_history(farmer_id: str = Path(..., example="1")):
+      data = load_data()
+      for farmer in data["farmers"]:
+          if farmer["farmer_id"] == farmer_id:
+              return farmer["treatment_history"]
+      raise HTTPException(status_code=404, detail="Farmer not found.")
+
+
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8005)
