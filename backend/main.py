@@ -69,10 +69,8 @@ labels = load_labels()
 class ImageData(BaseModel):
     image_base64: str
 
-
 interpreter = load_model()
 labels = load_labels()
-
 class ImageData(BaseModel):
     image_base64: str
 
@@ -164,8 +162,6 @@ async def upload_image(payload: ImagePayload):
     except Exception as e:
         logger.error(f"Error saving image: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
 
 def save_chunk_to_temp_file(audio_chunk):
     """Saves an audio chunk as a temporary WAV file."""
