@@ -12,7 +12,7 @@ import uvicorn
 from sarvam_transc import transcribe
 
 app = FastAPI()
-
+conversation_history = []
 
 @app.websocket("/ws/transcription")
 async def websocket_transcription(websocket: WebSocket):
