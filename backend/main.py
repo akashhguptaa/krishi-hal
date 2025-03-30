@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from sarvam_transc import transcribe
 from predict_disease import load_model, load_labels, infer
+from weather_pest import get_weather_data, analyze_weather_conditions
 from fastapi import HTTPException
 from pydantic import BaseModel
 
@@ -126,6 +127,27 @@ async def predict(image_data: ImageData):
     try:
         prediction = infer(image_data.image_base64, interpreter, labels)
         return prediction
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/weather/{city_id}")
+async def weather(city_id: str):
+    try:
+        weather_data = get_weather_data(city_id)
+        return weather_data
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/weather/alerts/{city_id}")
+async def weather_alerts(city_id: str):
+    try:
+        weather_data = get_weather_data(city_id)
+        alerts = analyze_weather_conditions(weather_data)
+        return {"alerts": alerts}
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

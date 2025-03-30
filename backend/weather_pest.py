@@ -45,28 +45,3 @@ def analyze_weather_conditions(weather_data):
         alerts.append("🦟 Increased mosquito population expected, be cautious of disease outbreaks.")
 
     return alerts
-
-# Main function
-def main():
-    weather_data = get_weather_data()
-    if weather_data:
-        alerts = analyze_weather_conditions(weather_data)
-        print("\n🌍 **Weather & Pest Alerts** 🌍")
-        print(f"📍 Location: {weather_data['name']}, {weather_data['sys']['country']}")
-        print(f"🌡️ Temperature: {weather_data['main']['temp']}°C")
-        print(f"💧 Humidity: {weather_data['main']['humidity']}%")
-        print(f"🌬️ Wind Speed: {weather_data['wind']['speed']} m/s")
-        print(f"⛅ Condition: {weather_data['weather'][0]['description'].title()}\n")
-
-        if alerts:
-            for alert in alerts:
-                print(alert)
-        else:
-            print("✅ No significant weather or pest risks detected.")
-
-    else:
-        print("❌ Error fetching weather data. Please check your API key and internet connection.")
-
-# Run the script
-if __name__ == "__main__":
-    main()
