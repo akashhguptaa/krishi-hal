@@ -6,10 +6,13 @@ import tempfile
 from datetime import datetime
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from loguru import logger
-from sarvam_transc import transcribe
+from sarvam_transc import transcribe, translate
+from chat_res import chat
+from TTS import speak
 
 app = FastAPI()
 transcription_results = []  # Accumulate transcription results
+communication_history = []
 
 @app.websocket("/ws/transcription")
 async def websocket_transcription(websocket: WebSocket):
@@ -21,32 +24,45 @@ async def websocket_transcription(websocket: WebSocket):
             base64_audio = await websocket.receive_text()
             logger.info("Received audio chunk")
 
-            try:
-                # Decode Base64 to bytes
-                audio_bytes = base64.b64decode(base64_audio)
-
-                # Convert bytes to int16 array
-                int16_array = np.frombuffer(audio_bytes, dtype=np.int16)
-
-                # Save chunk as a temporary WAV file
-                temp_file_path = save_chunk_to_temp_file(int16_array)
-                if temp_file_path:
-                    transcription = transcribe(temp_file_path)
-                    transcription_results.append(transcription)
-                    logger.success(f"Transcribed chunk: {transcription}")
+            if base64_audio:
+                try:
+                    # Decode Base64 to bytes
+                    audio_bytes = base64.b64decode(base64_audio)
+                    
+                    # Convert bytes to int16 array
+                    int16_array = np.frombuffer(audio_bytes, dtype=np.int16)
+                    
+                    # Save chunk as a temporary WAV file
+                    temp_file_path = save_chunk_to_temp_file(int16_array)
+                    if temp_file_path:
+                        transcription = transcribe(temp_file_path)
+                        transcription_results.append(transcription)
+                        logger.success(f"Transcribed chunk: {transcription}")
                 
+                except base64.binascii.Error as e:
+                    logger.error(f"Base64 decoding error: {e}")
+                except ValueError as e:
+                    logger.error(f"Invalid audio format received: {e}")
+            else:
+                # No more audio chunks received, process final transcription
+                final_transcription = " ".join(transcription_results)
+                logger.success(f"Final transcription: {final_transcription}")
+                transcription_results.clear()
                 
-
-            except base64.binascii.Error as e:
-                logger.error(f"Base64 decoding error: {e}")
-            except ValueError as e:
-                logger.error(f"Invalid audio format received: {e}")
+                # Get response from chat function
+                chat_response = chat(final_transcription, communication_history)
+                logger.success(f"Chat response: {chat_response}")
+                
+                # Translate and convert to speech
+                for translated_text in translate(chat_response):
+                    audio_base64 = speak(translated_text)
+                    if audio_base64:
+                        await websocket.send_text(audio_base64)
+                        logger.success("Sent translated speech to frontend")
+                break
 
     except WebSocketDisconnect:
         logger.warning("WebSocket disconnected unexpectedly.")
-        final_transcription = " ".join(transcription_results)
-        logger.success(f"Final transcription: {final_transcription}")
-        transcription_results.clear()
     except Exception as e:
         logger.error(f"Unexpected WebSocket error: {e}")
 

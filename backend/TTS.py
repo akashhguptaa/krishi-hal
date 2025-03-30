@@ -27,7 +27,7 @@ def chunk_text(text, max_length=300):
     return chunks
 
 
-def speak(output_text, output_filename="output.wav"):
+def speak(output_text):
     url = "https://api.sarvam.ai/text-to-speech"
 
     headers = {
