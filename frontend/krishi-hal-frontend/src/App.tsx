@@ -82,6 +82,7 @@ function App() {
         } catch (error) {
           console.error("Error processing recorded audio:", error);
         }
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       mediaRecorder.current.start();
