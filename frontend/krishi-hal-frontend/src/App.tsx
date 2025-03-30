@@ -1,198 +1,87 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
+import { useWebSocket } from "./hooks/useWebSocket.tsx";
+import { useAudioRecorder } from "./hooks/useAudioRecorder.tsx";
+import {
+  convertToMono,
+  createAudioChunks,
+  resampleAndConvertToInt16,
+} from "./utils/audioUtils.tsx";
 
-const audioContext = new AudioContext(); // Single instance
+const audioContext = new AudioContext();
 
-function App() {
-  const ws = useRef<WebSocket | null>(null);
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const audioChunks = useRef<Blob[]>([]);
+export default function App() {
+  const { send } = useWebSocket("ws://localhost:8005/ws/transcription");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imgs, setImgs] = useState<string | null>(null);
 
-  const [selectedFile, setSelectedFile] = useState<null | File>(null);
-  const [isRecording, setIsRecording] = useState(false);
+ const handleChangesImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   if (e.target.files && e.target.files[0]) {
+     const file = e.target.files[0];
+     const reader = new FileReader();
 
-  useEffect(() => {
-    ws.current = new WebSocket("ws://localhost:8005/ws/transcription");
+     reader.onload = async () => {
+       const imageData = reader.result as string;
 
-    ws.current.onopen = () => console.log("WebSocket Connected");
-    ws.current.onerror = (error) => console.error("WebSocket Error:", error);
-    ws.current.onclose = () => console.log("WebSocket Disconnected");
+       setImgs(imageData); 
 
-    return () => ws.current?.close();
-  }, []);
+       // Extract Base64 data (remove the data URL prefix)
+       const base64String = imageData.split(",")[1];
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
+       // Send Base64 to FastAPI endpoint
+       try {
+         const response = await fetch("http://localhost:8005/upload-image/", {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/json",
+           },
+           body: JSON.stringify({ base64_image: base64String }),
+         });
 
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
+         const result = await response.json();
+         if (response.ok) {
+           console.log("Image uploaded successfully:", result.file_path);
+         } else {
+           console.error("Error uploading image:", result.detail);
+         }
+       } catch (error) {
+         console.error("Network error:", error);
+       }
+     };
 
-      // Validate file type
-      if (!file.type.startsWith("audio/")) {
-        console.error("Invalid file type. Please upload an audio file.");
-        return;
-      }
+     reader.readAsDataURL(file);
+   }
+ };
 
-      setSelectedFile(file);
 
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const arrayBuffer = reader.result as ArrayBuffer;
+  const handleProcessAudio = async (audioBuffer: AudioBuffer) => {
+    const monoBuffer = convertToMono(audioContext, audioBuffer);
+    const chunks = createAudioChunks(audioContext, monoBuffer, 3, 1);
 
-        try {
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-          const monoAudioBuffer = convertToMono(audioBuffer);
-          const chunks = createAudioChunks(monoAudioBuffer, 3, 1);
-
-          for (const chunk of chunks) {
-            sendChunkToBackend(chunk);
-          }
-        } catch (error) {
-          console.error("Error decoding audio:", error);
-        }
-      };
-
-      reader.readAsArrayBuffer(file);
-    }
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder.current = new MediaRecorder(stream);
-      audioChunks.current = [];
-
-      mediaRecorder.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunks.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunks.current, { type: "audio/wav" });
-        const arrayBuffer = await audioBlob.arrayBuffer();
-
-        try {
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-          const monoAudioBuffer = convertToMono(audioBuffer);
-          const chunks = createAudioChunks(monoAudioBuffer, 3, 1);
-
-          for (const chunk of chunks) {
-            sendChunkToBackend(chunk);
-          }
-        } catch (error) {
-          console.error("Error processing recorded audio:", error);
-        }
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      mediaRecorder.current.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder.current && mediaRecorder.current.state !== "inactive") {
-      mediaRecorder.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const convertToMono = (audioBuffer: AudioBuffer) => {
-    const monoBuffer = audioContext.createBuffer(
-      1,
-      audioBuffer.length,
-      audioBuffer.sampleRate
-    );
-
-    const monoData = monoBuffer.getChannelData(0);
-    const numChannels = audioBuffer.numberOfChannels;
-
-    for (let i = 0; i < audioBuffer.length; i++) {
-      let sum = 0;
-      for (let channel = 0; channel < numChannels; channel++) {
-        sum += audioBuffer.getChannelData(channel)[i];
-      }
-      monoData[i] = sum / numChannels;
-    }
-    return monoBuffer;
-  };
-
-  const createAudioChunks = (
-    audioBuffer: AudioBuffer,
-    chunkDuration: number,
-    overlapDuration: number
-  ) => {
-    if (overlapDuration >= chunkDuration) {
-      throw new Error("Overlap duration must be smaller than chunk duration");
-    }
-
-    const chunks: AudioBuffer[] = [];
-    const sampleRate = audioBuffer.sampleRate;
-    const totalSamples = audioBuffer.length;
-
-    const chunkSize = chunkDuration * sampleRate;
-    const overlapSize = overlapDuration * sampleRate;
-    const stepSize = chunkSize - overlapSize;
-
-    for (let start = 0; start < totalSamples; start += stepSize) {
-      const end = Math.min(start + chunkSize, totalSamples);
-      const chunk = audioContext.createBuffer(1, end - start, sampleRate);
-
-      const chunkData = chunk.getChannelData(0);
-      const originalData = audioBuffer.getChannelData(0);
-
-      for (let i = start; i < end; i++) {
-        chunkData[i - start] = originalData[i];
-      }
-
-      chunks.push(chunk);
-    }
-
-    return chunks;
-  };
-
-  const resampleAndConvertToInt16 = (audioBuffer: AudioBuffer) => {
-    const targetSampleRate = 16000;
-    const originalSampleRate = audioBuffer.sampleRate;
-    const audioData = audioBuffer.getChannelData(0);
-
-    const ratio = targetSampleRate / originalSampleRate;
-    const newLength = Math.round(audioData.length * ratio);
-    const resampledData = new Float32Array(newLength);
-
-    for (let i = 0; i < newLength; i++) {
-      const index = Math.round(i / ratio);
-      resampledData[i] = audioData[Math.min(index, audioData.length - 1)];
-    }
-
-    // Convert Float32 to Int16
-    const int16Array = new Int16Array(newLength);
-    for (let i = 0; i < newLength; i++) {
-      int16Array[i] = Math.max(
-        -32768,
-        Math.min(32767, resampledData[i] * 32768)
+    chunks.forEach((chunk) => {
+      const int16Array = resampleAndConvertToInt16(chunk);
+      const base64Audio = btoa(
+        String.fromCharCode(...new Uint8Array(int16Array.buffer))
       );
-    }
-
-    return int16Array;
+      send(base64Audio);
+    });
   };
 
-  const sendChunkToBackend = (audioChunk: AudioBuffer) => {
-    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
-      console.error("WebSocket is not connected");
+  const { startRecording, stopRecording, isRecording } =
+    useAudioRecorder(handleProcessAudio);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("audio/")) {
+      console.error("Invalid file ty  pe");
       return;
     }
 
-    const int16Array = resampleAndConvertToInt16(audioChunk);
-
-    // Convert Int16Array to Base64
-    const base64Audio = btoa(
-      String.fromCharCode(...new Uint8Array(int16Array.buffer))
-    );
-
-    ws.current.send(base64Audio);
+    setSelectedFile(file);
+    const arrayBuffer = await file.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    handleProcessAudio(audioBuffer);
   };
 
   return (
@@ -205,7 +94,6 @@ function App() {
         <div>
           <p>File Name: {selectedFile.name}</p>
           <p>File Size: {(selectedFile.size / 1_000_000).toFixed(2)} MB</p>
-          <p>File Type: {selectedFile.type}</p>
         </div>
       )}
 
@@ -217,8 +105,13 @@ function App() {
       >
         {isRecording ? "Stop Recording" : "Start Recording"}
       </button>
+      <div>
+        <input type="file" onChange={handleChangesImages} />
+        <br />
+        {imgs && (
+          <img src={imgs} height="200px" width="200px" alt="Uploaded preview" />
+        )}
+      </div>
     </div>
   );
 }
-
-export default App;
