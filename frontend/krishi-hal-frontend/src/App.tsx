@@ -12,6 +12,46 @@ const audioContext = new AudioContext();
 export default function App() {
   const { send } = useWebSocket("ws://localhost:8005/ws/transcription");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imgs, setImgs] = useState<string | null>(null);
+
+ const handleChangesImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   if (e.target.files && e.target.files[0]) {
+     const file = e.target.files[0];
+     const reader = new FileReader();
+
+     reader.onload = async () => {
+       const imageData = reader.result as string;
+
+       setImgs(imageData); 
+
+       // Extract Base64 data (remove the data URL prefix)
+       const base64String = imageData.split(",")[1];
+
+       // Send Base64 to FastAPI endpoint
+       try {
+         const response = await fetch("http://localhost:8005/upload-image/", {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/json",
+           },
+           body: JSON.stringify({ base64_image: base64String }),
+         });
+
+         const result = await response.json();
+         if (response.ok) {
+           console.log("Image uploaded successfully:", result.file_path);
+         } else {
+           console.error("Error uploading image:", result.detail);
+         }
+       } catch (error) {
+         console.error("Network error:", error);
+       }
+     };
+
+     reader.readAsDataURL(file);
+   }
+ };
+
 
   const handleProcessAudio = async (audioBuffer: AudioBuffer) => {
     const monoBuffer = convertToMono(audioContext, audioBuffer);
@@ -65,6 +105,13 @@ export default function App() {
       >
         {isRecording ? "Stop Recording" : "Start Recording"}
       </button>
+      <div>
+        <input type="file" onChange={handleChangesImages} />
+        <br />
+        {imgs && (
+          <img src={imgs} height="200px" width="200px" alt="Uploaded preview" />
+        )}
+      </div>
     </div>
   );
 }
