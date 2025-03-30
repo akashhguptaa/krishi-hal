@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import json
 from chat_res import chat
 from TTS import speak
-
+from loguru import logger
 load_dotenv()
 
 
@@ -53,6 +53,7 @@ def translate(text):
 
     data = response.json()  # Parse the JSON response
     translated_text = data["translated_text"]
+    logger.info(translated_text)
     speak(str(translated_text))
 
 

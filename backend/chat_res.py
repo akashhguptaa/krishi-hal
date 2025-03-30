@@ -83,3 +83,5 @@ def chat(user_input, conversation_history=[]):
 # if __name__ == "__main__":
 
 #     chat_json()
+if __name__=="__main__":
+    pass
