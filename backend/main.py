@@ -6,6 +6,9 @@ import base64
 import tempfile
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Body
 from loguru import logger
+from sarvam_transc import transcribe, translate
+from chat_res import chat
+from TTS import speak
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from sarvam_transc import transcribe, translate
@@ -17,8 +20,6 @@ from typing import List
 from datetime import date as _date
 from pydantic import Field
 import json
-from chat_res import chat
-from TTS import speak
 
 app = FastAPI()
 
@@ -74,6 +75,11 @@ labels = load_labels()
 class ImageData(BaseModel):
     image_base64: str
 
+interpreter = load_model()
+labels = load_labels()
+class ImageData(BaseModel):
+    image_base64: str
+
 
 interpreter = load_model()
 labels = load_labels()
@@ -103,7 +109,8 @@ async def websocket_transcription(websocket: WebSocket):
                         transcription = transcribe(temp_file_path)
                         transcription_results.append(transcription)
                         logger.success(f"Transcribed chunk: {transcription}")
-
+>>>>>>>>> Temporary merge branch 2
+                
                 except base64.binascii.Error as e:
                     logger.error(f"Base64 decoding error: {e}")
                 except ValueError as e:
@@ -135,8 +142,9 @@ async def websocket_transcription(websocket: WebSocket):
 
 @app.post("/upload-image/")
 async def upload_image(payload: ImagePayload):
-    """Receives a Base64 image, decodes, and saves it as a temporary file."""
+    """Receives a Base64 image, decodes, saves it temporarily, and runs inference."""
     try:
+        # Decode Base64 image
         image_data = base64.b64decode(payload.base64_image)
 
         # Create a temporary image file
@@ -147,7 +155,19 @@ async def upload_image(payload: ImagePayload):
 
         logger.success(f"Image saved temporarily at: {temp_file_path}")
 
-        return {"message": "Image uploaded successfully", "file_path": temp_file_path}
+        # Run inference on the uploaded image
+        try:
+            prediction = infer(payload.base64_image, interpreter, labels)
+            logger.success(f"Inference result: {prediction}")
+        except Exception as e:
+            logger.error(f"Error during inference: {e}")
+            raise HTTPException(status_code=500, detail="Inference failed")
+
+        return {
+            "message": "Image uploaded and processed successfully",
+            "file_path": temp_file_path,
+            "prediction": prediction
+        }
 
     except base64.binascii.Error as e:
         logger.error(f"Base64 decoding error: {e}")
@@ -155,7 +175,6 @@ async def upload_image(payload: ImagePayload):
     except Exception as e:
         logger.error(f"Error saving image: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
 
 def save_chunk_to_temp_file(audio_chunk):
     """Saves an audio chunk as a temporary WAV file."""
@@ -221,24 +240,25 @@ async def add_farmer(farmer: Farmer):
 
 @app.post("/farmers/{farmer_id}/treatments/", status_code=201)
 async def add_treatment(
-    farmer_id: str = Path(..., example="1"), treatment: Treatment = Body(...)
-):
-    data = load_data()
-    for farmer in data["farmers"]:
-        if farmer["farmer_id"] == farmer_id:
-            farmer["treatment_history"].append(treatment.dict())
-            save_data(data)
-            return {"message": "Treatment added successfully."}
-    raise HTTPException(status_code=404, detail="Farmer not found.")
+      farmer_id: str,
+      treatment: Treatment = Body(...)
+  ):
+      data = load_data()
+      for farmer in data["farmers"]:
+          if farmer["farmer_id"] == farmer_id:
+              farmer["treatment_history"].append(treatment.dict())
+              save_data(data)
+              return {"message": "Treatment added successfully."}
+      raise HTTPException(status_code=404, detail="Farmer not found.")
 
 
 @app.get("/farmers/{farmer_id}/treatments/", response_model=List[Treatment])
-async def get_treatment_history(farmer_id: str = Path(..., example="1")):
-    data = load_data()
-    for farmer in data["farmers"]:
-        if farmer["farmer_id"] == farmer_id:
-            return farmer["treatment_history"]
-    raise HTTPException(status_code=404, detail="Farmer not found.")
+async def get_treatment_history(farmer_id: str):
+      data = load_data()
+      for farmer in data["farmers"]:
+          if farmer["farmer_id"] == farmer_id:
+              return farmer["treatment_history"]
+      raise HTTPException(status_code=404, detail="Farmer not found.")
 
 
 if __name__ == "__main__":
