@@ -73,7 +73,11 @@ def save_data(data):
 transcription_results = []  # Accumulate transcription results
 communication_history = []
 
-
+#giving context to the model
+with open("context.txt", "r") as f:
+    context = f.read()
+    prompt = f"you have to behave as farmer helper ai, who will give him suggestions around that use this as your context {str(context)} " 
+    chat(prompt, communication_history)
 interpreter = load_model()
 labels = load_labels()
 
