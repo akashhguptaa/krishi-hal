@@ -27,7 +27,7 @@ def chunk_text(text, max_length=300):
     return chunks
 
 
-def speak(output_text):
+def speak(output_text, output_filename="output.wav"):
     url = "https://api.sarvam.ai/text-to-speech"
 
     headers = {
@@ -59,6 +59,7 @@ def speak(output_text):
 
             if audio_base64:
                 audio_data = base64.b64decode(audio_base64)
+                print("sending chunk")
                 yield audio_data
                 audio_segments.append(audio_data)
             else:

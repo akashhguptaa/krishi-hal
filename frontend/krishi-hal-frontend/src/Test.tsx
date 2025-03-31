@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import leafimage from "../public/images/placeholder2.svg";
-import logo from "../public/images/logo123.png";
+// import logo from "../public/images/logo123.png"
 export default function KrishiHalApp() {
   const [isRecording, setIsRecording] = useState(false);
 
-  // Sample weather data - this would come from your API in a real app
   const weatherData = {
     temperature: 28,
     humidity: 65,
@@ -26,7 +25,7 @@ export default function KrishiHalApp() {
       {/* Top banner with Krishi-Hal text */}
       <div className="relative w-full h-32">
         <img
-          src={logo}
+          src="logo123.png"
           alt="Farm landscape"
           className="w-full h-full object-cover"
         />
@@ -127,11 +126,11 @@ export default function KrishiHalApp() {
         {/* Leaf image card */}
         <div className="bg-white rounded-3xl p-3 shadow-md">
           <div className="rounded-3xl overflow-hidden">
-            <img
+            {/* <img
               src={leafimage}
               alt="Leaf image"
               className="w-full aspect-square object-cover"
-            />
+            /> */}
           </div>
           <div className="flex items-center justify-between mt-4 px-2 pb-2 text-gray-600">
             <span className="text-xl">Click to Import Image</span>
