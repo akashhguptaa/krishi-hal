@@ -9,11 +9,12 @@ import {
 } from "./utils/audioUtils.tsx";
 import Weather from "./components/Weather.tsx";
 import { useNavigate } from "react-router-dom";
+import { tr } from "framer-motion/client";
 
 const audioContext = new AudioContext();
 
 export default function AppHome() {
-  const { send, audioURL } = useWebSocket(
+  const { send, audioURL, transcript } = useWebSocket(
     "ws://localhost:8005/ws/transcription"
   );
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -149,6 +150,15 @@ export default function AppHome() {
             </p>
           )}
         </div>
+        {/* Transcription Section */}
+        { transcript && (
+          <div className="bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
+            <h2 className="text-lg font-semibold text-green-700">
+              Transcription
+            </h2>
+            <p className="mt-2 text-gray-800">{transcript}</p>
+          </div>
+        )}
         {/* Audio Recording Section */}
         {audioURL && (
           <div className="mt-6 bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
@@ -163,6 +173,7 @@ export default function AppHome() {
             />
           </div>
         )}
+
         {/* Microphone Section */}
         <div
           className={`bg-white rounded-3xl mt-auto mb-4 p-4 transition-all duration-300 ${

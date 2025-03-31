@@ -4,6 +4,7 @@ export const useWebSocket = (url: string) => {
   const ws = useRef<WebSocket | null>(null);
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const audioChunks = useRef<Blob[]>([]);
+  const [transcript, setTranscript] = useState<string | null>(null);
 
   const send = useCallback((data: string) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
@@ -25,6 +26,9 @@ export const useWebSocket = (url: string) => {
           console.error("Error processing Blob:", error);
         }
         return;
+      } else if (typeof data === "string") {
+        setTranscript(data);
+        console.log("Transcript:", data);
       }
 
       try {
@@ -55,5 +59,5 @@ export const useWebSocket = (url: string) => {
     };
   }, [url]);
 
-  return { send, audioURL };
+  return { send, audioURL, transcript };
 };
