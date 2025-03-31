@@ -22,6 +22,7 @@ from datetime import date as _date
 from pydantic import Field
 import json
 from TTS import speak
+from fastapi.websockets import WebSocketState
 from literation import transliteration
 
 app = FastAPI()
@@ -140,14 +141,15 @@ async def websocket_transcription(websocket: WebSocket):
         logger.success(f"Chat response: {chat_response}")
         translation = translate(chat_response)
 
-        # message sent in hindi script
-        await websocket.send_text(transliteration(translation))
-        logger.success(translation)
+        #message sent in hindi script
+        if websocket.client_state != WebSocketState.DISCONNECTED:
+            await websocket.send_text(transliteration(translation))
+            logger.success(translation)
 
         # sending hindi audio chunks to hte frontend
         for audio_data in speak(translation):
             logger.info("audio data is here")
-            if audio_data:
+            if audio_data and websocket.client_state != WebSocketState.DISCONNECTED:
                 await websocket.send_text(audio_data)
                 logger.success("Sent translated speech to frontend")
 
@@ -156,7 +158,8 @@ async def websocket_transcription(websocket: WebSocket):
     except Exception as e:
         logger.error(f"Unexpected error in websocket: {e}")
     finally:
-        await websocket.close()
+        if websocket.client_state != WebSocketState.DISCONNECTED:
+            await websocket.close()
 
 
 @app.post("/upload-image/")
