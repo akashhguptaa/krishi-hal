@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useWebSocket } from "./hooks/useWebSocket.tsx";
 import { useAudioRecorder } from "./hooks/useAudioRecorder.tsx";
 import {
@@ -6,8 +6,7 @@ import {
   createAudioChunks,
   resampleAndConvertToInt16,
 } from "./utils/audioUtils.tsx";
-import { motion } from "framer-motion";
-import { Mic, CircleStop } from "lucide-react";
+import Weather from "./components/Weather.tsx";
 
 const audioContext = new AudioContext();
 
@@ -15,30 +14,47 @@ export default function App() {
   const { send, audioURL } = useWebSocket(
     "ws://localhost:8005/ws/transcription"
   );
-  const [imgs, setImgs] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [predictionResult, setPredictionResult] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [location, setLocation] = useState<{ lat: number; lon: number } | null>(
+    null
+  );
 
-  console.log(audioURL)
+  console.log(audioURL);
 
-  const handleChangesImages = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation({ lat: latitude, lon: longitude });
+          console.log("Latitude:", latitude, "Longitude:", longitude);
+        },
+      
+        (error) => {
+          console.error("Error getting location:", error.message);
+        }
+      );
+    } else {
+      console.error("Geolocation is not supported by this browser.");
+    }
+  }, []);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
 
       reader.onload = async () => {
         const imageData = reader.result as string;
-        setImgs(imageData);
+        setImagePreview(imageData);
         const base64String = imageData.split(",")[1];
 
         try {
           const response = await fetch("http://localhost:8005/upload-image/", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ base64_image: base64String }),
           });
 
@@ -83,82 +99,131 @@ export default function App() {
     useAudioRecorder(handleProcessAudio);
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gradient-to-br from-green-50 to-green-100 p-6">
-      <h1 className="text-4xl font-extrabold text-green-700 text-center drop-shadow-lg">
-        Krishi-Hal
-      </h1>
-      <p className="text-md text-green-600 text-center mt-2">
-        Your Smart Farming Assistant
-      </p>
-
-      <div className="mt-6 w-full max-w-md bg-white p-6 rounded-xl shadow-lg border border-green-200">
-        <h2 className="text-xl font-semibold text-green-700">Response</h2>
-        <p className="bg-green-100 p-4 rounded-lg mt-3 text-sm text-green-900">
-          Based on the information provided, your crops appear to be in good
-          health. The soil moisture levels are optimal, but you might want to
-          consider applying nitrogen-rich fertilizer within the next week for
-          better yield.
-        </p>
-      </div>
-
-      <div className="mt-6 bg-white p-6 rounded-xl shadow-lg w-full max-w-md flex flex-col items-center">
-        <motion.button
-          onClick={isRecording ? stopRecording : startRecording}
-          className="w-20 h-20 flex items-center justify-center rounded-full transition-all shadow-lg text-white text-lg"
-          style={{
-            backgroundColor: isRecording ? "#dc2626" : "#16a34a",
-          }}
-          whileTap={{ scale: 0.9 }}
-          animate={isRecording ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-          transition={{ duration: 0.5, repeat: isRecording ? Infinity : 0 }}
-        >
-          {isRecording ? <CircleStop /> : <Mic />}
-        </motion.button>
-        <p className="mt-3 text-sm text-green-700">
-          {isRecording ? "Recording... Tap to stop" : "Tap to start recording"}
-        </p>
-      </div>
-
-      <div className="mt-6 w-full max-w-md bg-white p-6 rounded-xl shadow-lg border border-green-200">
-        <h2 className="text-xl font-semibold text-green-700">
-          Upload Farm Image
-        </h2>
-        <input
-          type="file"
-          onChange={handleChangesImages}
-          className="mt-3 w-full border p-3 rounded-lg text-sm text-gray-700"
+    <div
+      className="relative max-w-sm mx-auto h-screen overflow-y-auto"
+      style={{ background: "linear-gradient(to bottom, #91C4D0, #1C551C)" }}
+    >
+      {/* Top banner */}
+      <div className="relative w-full h-32">
+        <img
+          src="logo123.png"
+          alt="Farm landscape"
+          className="w-full h-full object-cover"
         />
-        {imgs && (
-          <div className="mt-4">
+      </div>
+
+      {/* Main content area */}
+      <div className="h-[calc(100%-128px)] p-4 flex flex-col gap-4 ">
+        {/* Weather Section */}
+        <Weather />
+        {/* Image Upload Section */}
+        <div className="bg-white rounded-3xl p-3 shadow-md flex flex-col items-center">
+          {imagePreview ? (
             <img
-              src={imgs}
-              className="rounded-lg shadow-md border border-green-300"
-              alt="Uploaded preview"
+              src={imagePreview}
+              alt="Uploaded Preview"
+              className="w-full aspect-square object-cover rounded-lg"
             />
-            {predictionResult && (
-              <div className="mt-4 p-4 bg-green-100 border-l-4 border-green-600 rounded-lg shadow-md">
-                <h3 className="text-lg font-bold text-green-700">Prediction</h3>
-                <p className="text-md text-green-800">{predictionResult}</p>
-              </div>
-            )}
+          ) : (
+            <label className="cursor-pointer flex flex-col items-center justify-center w-full h-40 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:bg-gray-200 transition">
+              <span className="text-gray-600 text-sm">
+                Click to Upload Image
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+            </label>
+          )}
+          {predictionResult && (
+            <p className="text-center text-sm text-gray-700 mt-2">
+              Disease: <strong>{predictionResult}</strong>
+            </p>
+          )}
+        </div>
+        {/*Audio Recording Section*/}
+        {audioURL && (
+          <div className="mt-6 bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
+            <h2 className="text-lg font-semibold text-green-700">
+              Generated Audio
+            </h2>
+            <audio
+              ref={audioRef}
+              controls
+              src={audioURL}
+              className="w-full mt-2"
+            />
           </div>
         )}
-      </div>
-
-      {/* Audio Playback Section */}
-      {audioURL && (
-        <div className="mt-6 bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
-          <h2 className="text-lg font-semibold text-green-700">
-            Generated Audio
-          </h2>
-          <audio
-            ref={audioRef}
-            controls
-            src={audioURL}
-            className="w-full mt-2"
-          />
+        {/* Microphone Section */}
+        <div
+          className={`bg-white rounded-3xl mt-auto mb-4 p-4 transition-all duration-300 ${
+            isRecording ? "grid grid-cols-2 gap-2 items-center" : ""
+          }`}
+          onClick={isRecording ? stopRecording : startRecording}
+        >
+          {isRecording ? (
+            <>
+              <div className="flex justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-gray-800"
+                >
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" x2="12" y1="19" y2="22" />
+                </svg>
+              </div>
+              <div className="flex items-center justify-center h-12">
+                <div className="flex items-center space-x-1">
+                  {[...Array(8)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 bg-green-500 rounded-full animate-pulse"
+                      style={{
+                        height: `${Math.max(
+                          15,
+                          Math.floor(Math.random() * 40)
+                        )}px`,
+                        animationDelay: `${i * 0.1}s`,
+                      }}
+                    ></div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-gray-800"
+              >
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" x2="12" y1="19" y2="22" />
+              </svg>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
