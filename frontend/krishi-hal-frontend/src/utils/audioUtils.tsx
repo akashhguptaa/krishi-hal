@@ -77,3 +77,38 @@ export const resampleAndConvertToInt16 = (
 
   return int16Array;
 };
+
+export const base64ToAudioURL = (base64: string): string => {
+  const byteCharacters = atob(base64);
+  const byteNumbers = new Array(byteCharacters.length)
+    .fill(0)
+    .map((_, i) => byteCharacters.charCodeAt(i));
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: "audio/wav" });
+
+  return URL.createObjectURL(blob);
+};
+
+export const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () =>
+      resolve(reader.result?.toString().split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+export const saveBlobToFile = (blob: Blob, fileName: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+
+

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useWebSocket } from "./hooks/useWebSocket.tsx";
 import { useAudioRecorder } from "./hooks/useAudioRecorder.tsx";
 import {
@@ -7,12 +7,19 @@ import {
   resampleAndConvertToInt16,
 } from "./utils/audioUtils.tsx";
 import { motion } from "framer-motion";
+import { Mic, CircleStop } from "lucide-react";
 
 const audioContext = new AudioContext();
 
 export default function App() {
-  const { send } = useWebSocket("ws://localhost:8005/ws/transcription");
+  const { send, audioURL } = useWebSocket(
+    "ws://localhost:8005/ws/transcription"
+  );
   const [imgs, setImgs] = useState<string | null>(null);
+  const [predictionResult, setPredictionResult] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  console.log(audioURL)
 
   const handleChangesImages = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -36,13 +43,20 @@ export default function App() {
           });
 
           const result = await response.json();
+          console.log(result);
+
           if (response.ok) {
             console.log("Image uploaded successfully:", result.file_path);
+            setPredictionResult(
+              result.prediction?.predicted_class || "Unknown Disease"
+            );
           } else {
             console.error("Error uploading image:", result.detail);
+            setPredictionResult("Error retrieving prediction");
           }
         } catch (error) {
           console.error("Network error:", error);
+          setPredictionResult("Network error");
         }
       };
 
@@ -61,7 +75,7 @@ export default function App() {
       );
       send(base64Audio);
     });
-    //send signal
+
     send("END_OF_TRANSMISSION");
   };
 
@@ -98,7 +112,7 @@ export default function App() {
           animate={isRecording ? { scale: [1, 1.1, 1] } : { scale: 1 }}
           transition={{ duration: 0.5, repeat: isRecording ? Infinity : 0 }}
         >
-          {isRecording ? "■" : "🎤"}
+          {isRecording ? <CircleStop /> : <Mic />}
         </motion.button>
         <p className="mt-3 text-sm text-green-700">
           {isRecording ? "Recording... Tap to stop" : "Tap to start recording"}
@@ -115,13 +129,36 @@ export default function App() {
           className="mt-3 w-full border p-3 rounded-lg text-sm text-gray-700"
         />
         {imgs && (
-          <img
-            src={imgs}
-            className="mt-4 rounded-lg shadow-md border border-green-300"
-            alt="Uploaded preview"
-          />
+          <div className="mt-4">
+            <img
+              src={imgs}
+              className="rounded-lg shadow-md border border-green-300"
+              alt="Uploaded preview"
+            />
+            {predictionResult && (
+              <div className="mt-4 p-4 bg-green-100 border-l-4 border-green-600 rounded-lg shadow-md">
+                <h3 className="text-lg font-bold text-green-700">Prediction</h3>
+                <p className="text-md text-green-800">{predictionResult}</p>
+              </div>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Audio Playback Section */}
+      {audioURL && (
+        <div className="mt-6 bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
+          <h2 className="text-lg font-semibold text-green-700">
+            Generated Audio
+          </h2>
+          <audio
+            ref={audioRef}
+            controls
+            src={audioURL}
+            className="w-full mt-2"
+          />
+        </div>
+      )}
     </div>
   );
 }
