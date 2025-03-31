@@ -94,7 +94,7 @@ class ImageData(BaseModel):
 async def websocket_transcription(websocket: WebSocket):
     await websocket.accept()
     logger.info("WebSocket connected")
-    
+
     transcription_results = []
 
     try:
@@ -102,7 +102,7 @@ async def websocket_transcription(websocket: WebSocket):
             try:
                 # Set a timeout for receiving the next chunk
                 data = await websocket.receive_text()
-                
+
                 # Check if this is an end-of-transmission signal
                 if data == "END_OF_TRANSMISSION":
                     logger.info("Received end of transmission signal")
@@ -124,35 +124,35 @@ async def websocket_transcription(websocket: WebSocket):
                     except Exception as e:
                         logger.error(f"Error processing chunk: {e}")
                         continue
-                
+
             except WebSocketDisconnect:
                 logger.warning("Client disconnected. Processing final transcription.")
                 break
             except Exception as e:
                 logger.error(f"Unexpected error in chunk processing: {e}")
                 continue
-        
+
         # Only reach this point if we broke out of the loop
         logger.info("Processing final transcription")
         final_transcription = " ".join(transcription_results)
         logger.success(f"Final transcription: {final_transcription}")
-        
+
         chat_response = chat(str(final_transcription), communication_history)
         logger.success(f"Chat response: {chat_response}")
         translation = translate(chat_response)
 
-        #message sent in hindi script
+        # message sent in hindi script
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.send_text(transliteration(translation))
             logger.success(translation)
 
-        #sending hindi audio chunks to hte frontend
+        # sending hindi audio chunks to hte frontend
         for audio_data in speak(translation):
             logger.info("audio data is here")
             if audio_data and websocket.client_state != WebSocketState.DISCONNECTED:
                 await websocket.send_text(audio_data)
                 logger.success("Sent translated speech to frontend")
-        
+
         transcription_results.clear()
 
     except Exception as e:
@@ -160,6 +160,7 @@ async def websocket_transcription(websocket: WebSocket):
     finally:
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.close()
+
 
 @app.post("/upload-image/")
 async def upload_image(payload: ImagePayload):
@@ -179,7 +180,10 @@ async def upload_image(payload: ImagePayload):
         # Run inference on the uploaded image
         try:
             prediction = infer(payload.base64_image, interpreter, labels)
-            logger.success(f"Inference result: {prediction}")
+            predicted_class = prediction["predicted_class"]
+            prompt = f"Suggest the possible solutions specifically using insecticides or herbicides or weedicides, for this {predicted_class} disease. Just give me a short one to two sentence description for this."
+            res = chat(prompt, communication_history)
+            logger.success(f"Inference result: {res}")
         except Exception as e:
             logger.error(f"Error during inference: {e}")
             raise HTTPException(status_code=500, detail="Inference failed")
@@ -188,6 +192,7 @@ async def upload_image(payload: ImagePayload):
             "message": "Image uploaded and processed successfully",
             "file_path": temp_file_path,
             "prediction": prediction,
+            "response": translate(res),
         }
 
     except base64.binascii.Error as e:
@@ -220,7 +225,15 @@ def save_chunk_to_temp_file(audio_chunk):
 async def predict(image_data: ImageData):
     try:
         prediction = infer(image_data.image_base64, interpreter, labels)
-        return prediction
+        predict_disease = prediction["predicted_class"]
+        prompt = f"Look at this disease on my plant and tell me what possible things i can do to cure this disease basically suggestions around fertilizers and manures here is the disease {predict_disease}"
+        logger.info("started for llm")
+        res = chat(prompt, communication_history)
+        print(res)
+        res_trans = transcribe(res)
+        hin_trans = transliteration(res_trans)
+        data = {prediction: hin_trans}
+        return data.json()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -280,7 +293,6 @@ async def get_treatment_history(farmer_id: str):
     raise HTTPException(status_code=404, detail="Farmer not found.")
 
 
-# @app.get("/plant_disease")
 if __name__ == "__main__":
     import uvicorn
 

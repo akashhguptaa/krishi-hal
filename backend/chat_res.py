@@ -30,24 +30,27 @@ def generate_conversation_text(history):
 
 
 def chat(user_input, conversation_history=[]):
-    print("Type 'quit' to exit the session.\n")
+    try:
+        print("Type 'quit' to exit the session.\n")
 
-    conversation_history.append({"role": "user", "content": user_input})
+        conversation_history.append({"role": "user", "content": user_input})
 
-    # Prepare the conversation text to send to the model.
-    # This includes all previous interactions in the session.
-    prompt_text = generate_conversation_text(conversation_history)
+        # Prepare the conversation text to send to the model.
+        # This includes all previous interactions in the session.
+        prompt_text = generate_conversation_text(conversation_history)
 
-    # Generate a response using the Google Gen AI model
-    response = client.models.generate_content(
-        model="gemini-2.0-flash", contents=prompt_text
-    )
+        # Generate a response using the Google Gen AI model
+        response = client.models.generate_content(
+            model="gemini-2.0-flash", contents=prompt_text
+        )
 
-    # Extract the AI's response text
-    ai_response = response.text
-    print("AI:", ai_response)
-    conversation_history.append({"role": "farmer_helper", "content": ai_response})
-    return ai_response
+        # Extract the AI's response text
+        ai_response = response.text
+        print("AI:", ai_response)
+        conversation_history.append({"role": "farmer_helper", "content": ai_response})
+        return ai_response
+    except Exception as e:
+        print(f"Error in chat: {e}")
 
     # Append the AI response to the conversation history
 
