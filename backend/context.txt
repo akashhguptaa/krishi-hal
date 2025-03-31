@@ -1,0 +1,100 @@
+Presentation on Agrochemicals: Trade, Brand, and Commercial Names
+Introduction
+Agrochemicals play a crucial role in modern agriculture by protecting crops from pests, diseases, and weeds while also promoting plant growth. They are categorized into different types based on their function, such as fungicides, bactericides, insecticides, nematicides, growth regulators, and herbicides.
+
+This presentation provides a detailed breakdown of these chemicals, their technical names, and corresponding trade/brand names, helping farmers, agronomists, and agricultural professionals make informed decisions.
+
+1. Bactericides and Fungicides
+These chemicals help control bacterial and fungal infections in crops, ensuring plant health and increased yield.
+
+S.No.	Technical Name	Trade/Brand Name
+1	2-Bromo-2-nitropropane-1,3-diol (Bronopol)	Bactrinashak (Indofil), Bactronol-100 (Merlin Chemicals), Myacide AS (BASF)
+2	Azoxystrobin 20% SC + Difenoconazole 12.5% SC	Amistar Top (Syngenta)
+3	Azoxystrobin 23% SC	Amistar (Syngenta), Noyaku (IFFCO-MC)
+4	Carbendazim 50% WP	Bavistin (BASF), Folio Gold (Syngenta), Yamato (IFFCO-MC)
+5	Chlorothalonil 75% WP	Kavach (Syngenta), Ishaan (TATA), Dolphin (ACME)
+6	Copper Hydroxide 53.8% WP	Kocide 2000 (Dupont)
+7	Copper Oxychloride 50% WP	Blue Copper (Syngenta), Blitox (TATA), Cuprina (PI Ind.)
+8	Mancozeb 75% WP	Dithane M-45 (Corteva Dowagro), Tata M-45 (TATA)
+9	Tebuconazole 25.9% EC	Folicur (Bayer), Orius (Adama)
+10	Tricyclazole 18% + Mancozeb 62% WP	Merger (Indofil), Trimasik (Sikko Industrie)
+Understanding the Composition:
+% (Percentage) refers to the active ingredient concentration in the formulation.
+
+SC (Suspension Concentrate) is a liquid formulation that mixes well in water.
+
+WP (Wettable Powder) is a powdered form that needs to be diluted with water before use.
+
+2. Insecticides and Biopesticides
+These chemicals control insect infestations and pests in crops. Some insecticides also have biological formulations derived from natural sources.
+
+S.No.	Technical Name	Trade/Brand Name
+1	Acetamiprid 20% SP	Manik (Rallis), Rapid (Crystal), Rekord (DuPont)
+2	Chlorantraniliprole 18.5% SC	Coragen (Dupont), Cover liq (Dhanuka)
+3	Imidacloprid 17.8% SL	Confidor (Bayer), Seamer (DuPont), Atom (Indofil)
+4	Spinosad 45% SC	Spintor (Bayer), Tracer (Dow)
+5	Thiamethoxam 25% WG	Actara (Syngenta), Renova (UPL), Click (Indofil)
+Key Definitions:
+SP (Soluble Powder) dissolves easily in water.
+
+SL (Soluble Liquid) is a liquid form that mixes in water for application.
+
+WG (Water Dispersible Granules) ensures better absorption and adherence to plants.
+
+3. Miticides (Acaricides)
+Miticides are used to control mites and other similar pests that attack crops.
+
+S.No.	Technical Name	Trade/Brand Name
+1	Fenazaquin 10% EC	Magister (DuPont)
+2	Fenpyroximate 5% EC	Sedna (Rallis), Pyromite (Excel)
+3	Propargite 57% EC	Omite (Dhanuka), Mainichi (IFFCO-MC)
+4	Spiromesifen 240 SC	Oberon (Bayer), Danfuron (Dhanuka)
+Understanding Formulations:
+EC (Emulsifiable Concentrate) needs to be mixed with water before spraying.
+
+SC (Suspension Concentrate) offers better coverage and adherence.
+
+4. Nematicides
+Nematicides control nematodes, which are microscopic worms affecting plant roots.
+
+S.No.	Technical Name	Trade/Brand Name
+1	Fluensulfone 2% GR	Nimitz (Adama)
+2	Fluopyram 34.48% SC	Velum Prime (Bayer)
+Understanding GR Formulation:
+GR (Granular Formulation) is applied directly to the soil for nematode control.
+
+5. Growth Regulators
+These chemicals stimulate or inhibit plant growth to enhance crop yield.
+
+S.No.	Technical Name	Trade/Brand Name
+1	1-Naphthyl Acetic Acid 4.5% SL	Planofix (Bayer)
+2	Gibberellic Acid (GA) Technical	Progib (Sumitomo Chemicals)
+3	Ethephon 39%	Ethrel (Bayer), Adpon (Advance Chemicals)
+Effects of Growth Regulators:
+Ethephon promotes fruit ripening.
+
+Gibberellic Acid stimulates plant growth and elongation.
+
+1-Naphthyl Acetic Acid regulates plant hormones for better flowering and fruiting.
+
+6. Weedicides (Herbicides)
+These chemicals eliminate or inhibit weed growth in agricultural fields.
+
+S.No.	Technical Name	Trade/Brand Name
+1	Indaziflam 500 SC	Alion Plus (Crop Science, India)
+Understanding Herbicides:
+Selective Herbicides kill only targeted weeds without affecting crops.
+
+Non-Selective Herbicides kill all plants they come in contact with.
+
+Conclusion
+Farmers and agricultural professionals must select the right agrochemical based on their crop’s needs.
+
+Understanding formulations (WP, SC, EC, etc.) helps in proper application and effectiveness.
+
+Trade names vary by manufacturer, so checking the active ingredient is crucial.
+
+Sustainable practices, such as rotating different classes of chemicals, can help prevent pest resistance.
+
+This data serves as an essential reference for scientists, agronomists, and farmers in making informed choices to boost crop productivity and maintain soil health.
+
