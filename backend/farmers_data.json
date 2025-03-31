@@ -4,27 +4,27 @@
       "land_size": 52,
       "farmer_name": "Hari Gopal",
       "crop": {
-        "name": "name of crop",
+        "name": "Wheat",
         "health": {
           "month_or_week_1": [
-            "name of pesticide",
-            "condition of soil and plant based on image data",
+            "Azoxystrobin",
+            "Excellent soil conditions, plants showing robust growth with deep green foliage",
             {
               "weather": {
-                "humidity": "value",
-                "temperature": "value",
-                "other_conditions": "value"
+                "humidity": "65%",
+                "temperature": "28°C",
+                "other_conditions": "Mostly sunny with occasional light showers"
               }
             }
           ],
           "month_or_week_2": [
-            "name of pesticide",
-            "condition of soil and plant based on image data",
+            "Propiconazole",
+            "Good soil moisture, some minor insect activity detected on leaf edges",
             {
               "weather": {
-                "humidity": "value",
-                "temperature": "value",
-                "other_conditions": "value"
+                "humidity": "70%",
+                "temperature": "32°C",
+                "other_conditions": "Higher than average rainfall"
               }
             }
           ]

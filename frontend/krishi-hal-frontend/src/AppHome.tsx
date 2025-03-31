@@ -23,6 +23,7 @@ export default function AppHome() {
   const [location, setLocation] = useState<{ lat: number; lon: number } | null>(
     null
   );
+  const [inference, setInference] = useState<String | null>(null)
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -67,6 +68,9 @@ export default function AppHome() {
             setPredictionResult(
               result.prediction?.predicted_class || "Unknown Disease"
             );
+            setInference(
+                result.response
+            )
           } else {
             console.error("Error uploading image:", result.detail);
             setPredictionResult("Error retrieving prediction");
@@ -149,9 +153,17 @@ export default function AppHome() {
               Disease: <strong>{predictionResult}</strong>
             </p>
           )}
+          {inference && (
+            <div className="bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
+              <h2 className="text-lg font-semibold text-green-700">
+                Inference 
+              </h2>
+              <p className="mt-2 text-gray-800">{inference}</p>
+            </div>
+          )}
         </div>
         {/* Transcription Section */}
-        { transcript && (
+        {transcript && (
           <div className="bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
             <h2 className="text-lg font-semibold text-green-700">
               Transcription

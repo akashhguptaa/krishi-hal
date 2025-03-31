@@ -196,7 +196,7 @@ async def upload_image(payload: ImagePayload):
             "message": "Image uploaded and processed successfully",
             "file_path": temp_file_path,
             "prediction": prediction,
-            "response": translate(res),
+            "response": transliteration(translate(res)),
         }
 
     except base64.binascii.Error as e:
