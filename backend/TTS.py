@@ -69,18 +69,18 @@ def speak(output_text, output_filename="output.wav"):
             return
 
     # Combine audio segments
-    if audio_segments:
-        with wave.open(output_filename, "wb") as output_wav:
-            with wave.open(BytesIO(audio_segments[0]), "rb") as first_wav:
-                output_wav.setparams(first_wav.getparams())  # Copy audio parameters
+    # if audio_segments:
+    #     with wave.open(output_filename, "wb") as output_wav:
+    #         with wave.open(BytesIO(audio_segments[0]), "rb") as first_wav:
+    #             output_wav.setparams(first_wav.getparams())  # Copy audio parameters
 
-            for segment in audio_segments:
-                with wave.open(BytesIO(segment), "rb") as wav_file:
-                    output_wav.writeframes(wav_file.readframes(wav_file.getnframes()))
+    #         for segment in audio_segments:
+    #             with wave.open(BytesIO(segment), "rb") as wav_file:
+    #                 output_wav.writeframes(wav_file.readframes(wav_file.getnframes()))
 
-        print(f"Audio saved successfully as {output_filename}")
-    else:
-        print("Error: No audio segments were generated.")
+    #     print(f"Audio saved successfully as {output_filename}")
+    # else:
+    #     print("Error: No audio segments were generated.")
 
 
 if __name__ == "__main__":

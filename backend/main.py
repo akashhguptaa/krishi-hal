@@ -22,6 +22,7 @@ from datetime import date as _date
 from pydantic import Field
 import json
 from TTS import speak
+from literation import transliteration
 
 app = FastAPI()
 
@@ -138,7 +139,12 @@ async def websocket_transcription(websocket: WebSocket):
         chat_response = chat(str(final_transcription), communication_history)
         logger.success(f"Chat response: {chat_response}")
         translation = translate(chat_response)
+
+        #message sent in hindi script
+        await websocket.send_text(transliteration(translation))
         logger.success(translation)
+
+        #sending hindi audio chunks to hte frontend
         for audio_data in speak(translation):
             logger.info("audio data is here")
             if audio_data:
@@ -271,6 +277,7 @@ async def get_treatment_history(farmer_id: str):
     raise HTTPException(status_code=404, detail="Farmer not found.")
 
 
+# @app.get("/plant_disease")
 if __name__ == "__main__":
     import uvicorn
 
