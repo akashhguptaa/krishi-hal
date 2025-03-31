@@ -56,6 +56,37 @@ const farmerData = {
 export default function FarmerHealthPage() {
   const farmers = farmerData.farmers;
   const [selectedPeriod, setSelectedPeriod] = useState("month_or_week_1");
+  const [treatment, setTreatment] = useState({
+    pesticide: "",
+    condition: "",
+    weather: {
+      humidity: "",
+      temperature: "",
+      other_conditions: "",
+    },
+  });
+  const [isFormVisible, setIsFormVisible] = useState(false);
+  const addTreatment = async (farmerId: Number) => {
+    try {
+      const response = await fetch(
+        `http://your-api.com/farmers/${farmerId}/treatments/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(treatment),
+        }
+      );
+
+      if (response.ok) {
+        alert("Treatment added successfully!");
+        setIsFormVisible(false);
+      } else {
+        alert("Error adding treatment");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
 
   return (
     <div
@@ -208,9 +239,86 @@ export default function FarmerHealthPage() {
                   </div>
                 );
               })}
+              <button
+                onClick={() => setIsFormVisible(!isFormVisible)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md mt-4"
+              >
+                Add Treatment
+              </button>
             </div>
           </div>
         ))}
+        {isFormVisible && (
+          <div className="bg-white p-4 rounded-md shadow-md mt-4">
+            <h3 className="text-lg font-semibold mb-2">New Treatment</h3>
+            <input
+              type="text"
+              placeholder="Pesticide Name"
+              value={treatment.pesticide}
+              onChange={(e) =>
+                setTreatment({ ...treatment, pesticide: e.target.value })
+              }
+              className="border p-2 w-full rounded mb-2"
+            />
+            <input
+              type="text"
+              placeholder="Condition"
+              value={treatment.condition}
+              onChange={(e) =>
+                setTreatment({ ...treatment, condition: e.target.value })
+              }
+              className="border p-2 w-full rounded mb-2"
+            />
+            <input
+              type="text"
+              placeholder="Humidity"
+              value={treatment.weather.humidity}
+              onChange={(e) =>
+                setTreatment({
+                  ...treatment,
+                  weather: { ...treatment.weather, humidity: e.target.value },
+                })
+              }
+              className="border p-2 w-full rounded mb-2"
+            />
+            <input
+              type="text"
+              placeholder="Temperature"
+              value={treatment.weather.temperature}
+              onChange={(e) =>
+                setTreatment({
+                  ...treatment,
+                  weather: {
+                    ...treatment.weather,
+                    temperature: e.target.value,
+                  },
+                })
+              }
+              className="border p-2 w-full rounded mb-2"
+            />
+            <input
+              type="text"
+              placeholder="Other Conditions"
+              value={treatment.weather.other_conditions}
+              onChange={(e) =>
+                setTreatment({
+                  ...treatment,
+                  weather: {
+                    ...treatment.weather,
+                    other_conditions: e.target.value,
+                  },
+                })
+              }
+              className="border p-2 w-full rounded mb-2"
+            />
+            <button
+              onClick={() => addTreatment(farmerId)}
+              className="bg-green-600 text-white px-4 py-2 rounded-md mt-2"
+            >
+              Submit Treatment
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
