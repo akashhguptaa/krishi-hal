@@ -141,7 +141,7 @@ async def websocket_transcription(websocket: WebSocket):
         logger.success(f"Chat response: {chat_response}")
         translation = translate(chat_response)
 
-        #message sent in hindi script
+        # message sent in hindi script
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.send_text(transliteration(translation))
             logger.success(translation)
@@ -180,7 +180,10 @@ async def upload_image(payload: ImagePayload):
         # Run inference on the uploaded image
         try:
             prediction = infer(payload.base64_image, interpreter, labels)
-            logger.success(f"Inference result: {prediction}")
+            predicted_class = prediction["predicted_class"]
+            prompt = f"Suggest the possible solutions specifically using insecticides or herbicides or weedicides, for this {predicted_class} disease. Just give me a short one to two sentence description for this."
+            res = chat(prompt, communication_history)
+            logger.success(f"Inference result: {res}")
         except Exception as e:
             logger.error(f"Error during inference: {e}")
             raise HTTPException(status_code=500, detail="Inference failed")
@@ -189,6 +192,7 @@ async def upload_image(payload: ImagePayload):
             "message": "Image uploaded and processed successfully",
             "file_path": temp_file_path,
             "prediction": prediction,
+            "response": translate(res),
         }
 
     except base64.binascii.Error as e:
